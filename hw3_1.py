@@ -4,7 +4,7 @@ import sys
 # establish a connection to the database
 connection = pymongo.MongoClient("mongodb://localhost")
 
-def remove_lowest_hw():
+def remove_lowest_homework_all():
 	print "removing lowest homework score for each student"
 	db = connection.school
 	updated_count = 0
