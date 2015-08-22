@@ -10,7 +10,6 @@ def remove_lowest_homework_all():
 	updated_count = 0
 
 	try:
-		
 		students = db.students.find().sort( [( "_id", 1 )] )
 		
 		for student in students:
