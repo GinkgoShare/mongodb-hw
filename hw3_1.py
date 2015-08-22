@@ -13,10 +13,10 @@ def remove_lowest_homework_all():
 		students = db.students.find().sort( [( "_id", 1 )] )
 		
 		for student in students:
-
+			# get sorted list of homework scores
 			homework_scores = sorted([score for score in student.get("scores") if score["type"] == "homework"])
 			student.get("scores").remove(homework_scores[0])
-
+			# replace with modified student
 			result = db.students.replace_one({"_id" : student["_id"]}, student)
 			updated_count += result.modified_count
 
