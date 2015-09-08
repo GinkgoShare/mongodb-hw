@@ -1,0 +1,970 @@
+ __What_is_MongoDB?__
+
+MongoDB is a non-relational data store for JSON documents.
+
+JSON 
+	-> JavaScript Object Notation 
+	-> www.json.org
+	-> JSON documents can be heirarchical.
+
+MongoDB is schemaless.
+	-> two documents within the same collection do not have to have the same schema
+	-> this is also sometimes referred to as "dynamic schema" 
+
+Within a MongoDB database, you are free to do any of the following:
+
+	- begin inserting documents with a new schema
+	- perform bulk updates on existing documents
+	- update old documents to a new schema one at a time with an appropriate event handler
+	
+	? Contrast this with what happens in a relational database, where the table must typically be taken offline in order to add columns.
+
+__Reflection__
+
+How does MongoDB differ from a relational database?
+
+MongoDB has dynamic schema. New properties within a document can be added with any insert or update request. This is why MongoDB is said 
+to "horizontally scalable". To change a databases schema in a relational model you would have to take it offline to make these changes.
+
+
+
+ __Application_Architecture__
+
+__mongod__:
+	-> MongoDB starts the mongod process
+
+__mongo_shell__:
+	-> JavaScript interpretter for running MongoDB commands
+
+__Client_Application__:
+	-> MongodDB driver
+	-> Client source code
+
+
+
+__The_Mongo_Shell__
+
+To start manipulating a MongoDB database, use the command use
+	-> use <dbname>
+	-> if the DB does not exist yet it will be created for you
+
+db.things.save( { a : 1, b : 2, c : 3 } );
+	-> keyword db to access using database
+	-> things is the collection to manipulate
+			-> if it doesn't exist then it is created
+	-> save function to insert to the specified collection
+
+db.things.find( <args1>, <args2> );
+	-> displays the collection
+	-> find specific documents in collection
+			-> db.things.find( { a : 1 } );
+					-> finds documents with the specified key/value pair
+
+
+
+__Document_Heirarchy__
+
+Documents can be embedded within other documents. 
+
+db.things.save({ 
+	name : "andrew", 
+	address : {
+		street : "3326 White Spruce St.",
+		city : "Osgoode",
+		postal_code : "K0A2W0"
+	} 
+});
+
+db.things.find().pretty();
+	-> pretty is a command that displays the collection in its heirarchical form.
+
+db.things.findOne();
+	-> prints the first document it finds in the collection using the pretty format
+
+
+
+__MondoDB_is_Schemaless__
+
+MongoDB works well for short-term iterations of project builds.
+	-> Agile management
+
+db.users.insert( { JSON_document } );
+
+
+
+__MongoDB_CRUD___
+
+Document creation, retrieval modification, and removal operations.
+
+__________MongoDB functions___
+C reate 	-> insert();
+R ead		-> find();
+U pdate		-> update();
+D elete		-> remove();
+
+MongoDB's operations that manipulate data in the database exist as methods/functions in programming languag API's,,
+not as a seperate language.
+
+__The_MongoDB_Shell__
+
+The shell is an interactive JavaScript interpreter
+	-> built in functionality to connect and manipulate data in a mongo database
+
+A banner is printed upon startup. This helps in detecting out of sync errors between the server and shell.
+
+hotkey 	-> ctrl + a|b -> home | end
+command -> help -> returns list of topics
+
+__BSON__
+
+BSON -> A binary-encoded serialization of JSON-like documents.
+
+BSON is a superset of JSON that contains extensions that allow representation of data types that are not part of 
+the JSON specification. For example the Date() type and BinData() type.
+
+The mongo shell provides constructors to represent integer values because the JSON specification represents all number
+values as doubles.
+	-> NumberInt( <value> )
+	-> NumberLong( <value> )
+
+new Date() = ISODate()
+	-> ISODate() is the mongo constructor for data
+	-> use mongodb constructors to represent these types in your documents
+
+__Inserting_Documents__
+
+Within the mongo shell:
+	- var db = handle to the using database
+			-> just typing db will return the name of that database
+			-> collections are sets of documents and are properties of db
+
+	- db.people.insert( <document> );
+	- db.people.find( <arg1>, <arg2> );
+			-> no args returns all docs from collection
+
+When docuemnts are inserted:
+	- server requires unique id for the document
+			-> all documents have an _id field
+			-> if the value is not provided then a unique id is generated as an ObjectId type
+					-> ObjectId() is constructed using time, machine id, process id and a counter
+			-> the value for _id is immutable
+					-> can simulate the change of _id by removing the document and re-inserting with a new _id value
+
+__Intro_to_findOne()__
+
+CRUD ops are presented as methods of a collection.
+
+db.collection.findOne( arg1, arg2 );
+	-> arg1 is represented as a "where" clause common to a sql statement
+			-> this is just a basic document structure - { key : value, nth_key : nth_value }
+			-> finds the first document that matches the argument
+	-> arg2 can specify which fields are returned using the field name with a boolean value
+			-> db.collection.findOne( arg1, { name : true } );
+			-> _id defaults to true if not specified
+	-> arguments are sent as a BSON encoding
+
+__Intro_to_find()__
+
+db.collection.find();
+	-> retrieves all documents within the collection collection
+	-> queries are returned in batches when there are many documents within the collection
+
+When manually iterating through batches of documents, a cursor is open on the server side, however after
+10 minutes the cursor is closed automatically.
+
+Appending pretty() to the end of a find() call returns the docs and displays them in a more readable manner.
+
+Querying using field selection:
+	- db.collection.find( arg1, arg2 );
+	- like findOne(), find can take a couple of arguments
+			-> args are optional
+	- querying using multiple arg1 clauses means all fields within the clause must match for a document to be returned.
+			-> like an &&
+
+__Using_$gt_and_$lt__
+
+Querying using operators to get back range of types.
+	-> known as range or inequality operators
+	-> db.scores.find( { score : { $gt : 95 } } );
+	-> range operators can be expressed using subdocuments of the arg1 document in a find() invokation
+	-> subdocument clauses accept multiple arguments themselves that work as an && clause
+			-> db.scores.find( { score : { $gt : 95, $lt : 100 }, type : "essay" } );
+					-> finds documents that where type equals essay and the score is greater than 95 but less
+					   than 100
+	-> inclusive operators are $gte and $lte
+
+ Inequalities on strings:
+ 	- comparisons are sorted according to the UTF-8 code unit and mongodb knows nothing of a users current locale
+ 			-> look for better locale aware support from MongoDB in the future
+ 	- range type comparisons do not span accross datatypes
+ 			-> db.people.find( { name : "D" } );
+ 					-> will not find names with numeric values, only strings if a string selector is used
+ 			-> this being said, storing different datatypes for one field in a schema is not recommended
+
+ Regular expressions, $exists, $type:
+ 	- using the $exists operator we can find() documents where a certain field exists or does not exist
+ 			-> db.people.find( { profession : { $exists : true } } );
+ 			|| db.people.find( { profession : { $exists : false } } );
+ 	- the $type operator finds docs that have fields of a specific type according to the BSON specifications
+ 	  numeric encoding
+ 			-> db.people.find( { name : { $type : 2 } } );
+ 					-> 2 equals BSON specifications numeric encoding for String type
+ 	- use $regex to find documents with a specific pattern in a field
+ 			-> MongoDB uses Perl style regular expressions
+ 			-> db.people.find( { name : { $regex : "a" } } );
+ 					-> finds all documents where it has name fields with values containing the letter "a"
+ 			-> "e$" finds values that end in "e"
+ 			-> "^A" finds values that start with "A"
+
+ __Using_$or__
+
+$or is the union operator for queries.
+
+$or is a prefix operator whose value is an array of queries
+	-> db.people.find({ $or : [
+				{ name : { $regex : "e$" } },
+				{ age : { $exists : true } }
+			] 
+	   });
+
+A document is returned if any of the $or queries match.
+
+__Using_$and__
+
+Works the same way as $or operator except that it matches all. An infrequent operator because most of the time
+normal query syntax is matched like an $and clause.
+
+__Querying_Inside_Arrays__
+
+MongoDB's query operators are somewhat polymorphic in the sense that if a value of a type is an array then the first
+level of array depth will be search to match the specified value without the requiring different query syntax.
+		-> db.accounts.find( { favorites : "pretzels" } );
+				-> "pretzels" would be found if favorites was a string type or an array type if "pretzels" was a value found
+					in the first level of the array
+
+__Using_$in_and_$all__
+
+$all operation looks for a subset within an array field.
+
+db.accounts.find({
+	favorites : {
+		$all : [
+			"pretzels",
+			"beer"
+		]
+	}
+});
+
+The above query looks for documents that have a favorites field with all yhe specified values.
+
+THe $in operator returns documents that match any of the specified values.
+
+db.accounts.find({
+	favorites : {
+		$in : [
+			"pretzels",
+			"beer"
+		]
+	}
+});
+
+
+
+__Queries_with_Dot_Notation__
+
+How do you write queries into nested documents?
+
+	If you want to query nested documents using inequality operators then you will use MongoDB's 
+	dot notation.
+
+Order of appearance is important asqueries are on BSON objects which are represented as byte so
+querying for exact nested documents are order dependant.
+
+db.collection.find( { email.work : "christopher.elliott@hrsdc-rhdcc.gc.ca" } );
+	-> finds { _id : "...", email : { work : "christopher.elliott@hrsdc-rhdcc.gc.ca", home : "..." } }
+
+
+
+__Querying,_Cursors__
+
+When you execute a query, a cursor is created inside the shell. You can capture a cursor object in
+a variable.
+
+var cursor = db.people.find();
+	-> captures the cursor in the shell
+	-> cursor.hasNext() && cursor.next()
+	-> cursor.limit(5) retrieves the next five documents
+	-> cursor.sort( { name : -1 } )
+			-> reverses order by name
+	-> appending null after queries will return no results
+			-> cursor.next(); null;
+
+while(cursor.hasNext())
+	printjson(cursor.next())
+
+	-> cursor.sort(...).skip(2).limit(3);
+			-> can be chained
+
+
+
+Counting Results:
+	- db.scores.count();
+	- performs like a find() procedure with the same arguments butjust counts the results
+
+
+
+__Updating_Documents__
+
+The update() method/function in the mongo shell does 4 different things.
+	1) provide wholesale replacement of documents
+	2) manipulation of fields within documents
+	3) upserts, which can insert a document if it doesn't already exist otherwise it will 
+	   just perform an update to the existing document
+	4) update multiple documents
+
+db.collection.update( arg1, arg2 );
+	-> arg1 represents the query to match or the "where" clause
+	-> arg2 is the document that will replace what exists except for the unique _id
+
+To update specific fields in a document wuthout affecting other fields, you will use the $set
+operator within an update call, as arg2 of course.
+	-> db.collection.update( { name : "Chris" }, { $set : { age : 31 } } );
+
+Use the $inc operator to increment or decrement an existing value by a specified amount.
+	-> db.collection.update( { score : 30 }, { $inc : 10 } );
+
+Use $unset to remove a field and its value from a document.
+	-> db.collection.update( { "_id" : "040570022" }, { $unset : { interests : 1 } } );
+
+
+
+__Using_$push,_$pop,_$pull,_$pushAll,_$pullAll,_$addToSet__
+
+ - operations that manipulate arrays within documents
+ - you can use $set along with dot notation to update arrays
+ - $push to append to an array
+ - $pop to remove from the end of an array
+ - $pushAll concatenates a specified array to the end of an existing array
+ - $addToSet will add values to an array if they do not exist already
+
+Examples:
+
+db.arrays.update( { _id : 0 }, { $set : { a.a : 5 } } );
+	-> using dot notation and $set to modify the a value withinan array
+
+db.arrays.update( { _id : 0 }, { $push : { a : 6 } } );
+	-> appends 6 to array with key a
+
+db.arrays.update( { _id : 0 }, { $pop : { a : 1 } } );
+	-> removes the right most element
+
+db.arrays.update( { _id : 0 }, { $pop : { a : -1 } } );
+	-> removes the left most element
+
+db.arrays.update( { _id : 0 }, { $pull : { a : 4 } } );
+	-> removes the value 4 fromthe array with a key a
+
+db.arrays.update( { _id : 0 }, { $pushAll : { a : [ 2, 4, 6 ] } } );
+	-> appends all elements to the array
+
+db.arrays.update( { _id : 0 }, { $pullAll : { a : [ 2, 4, 6 ] } } );
+	-> removes all values from the array
+
+db.arrays.update( { _id : 0 }, { $addToSet : { a : 6 } } );
+	-> adds 6 to the array if it does not already exist
+
+
+
+__Upserts__
+
+db.people.update( { name : "George" }, { $set : { age : 40 } }, { upsert : true } );
+	-> upsert will add document with name "George", age 40 if document with name "George" doesn't exist
+
+__Multi-Update__
+
+db.people.update( {}, { $set : { title : "Dr" } }, { multi : true } );
+	-> Unless multi option is specified, mongo willonly update the first instance it finds
+
+Some MongoDB drivers specify different methods to perform single updates or multi updates.
+
+Write operations are not isolated in the sense that multi updates can yield its operations to other
+operations in between its full operation.
+	-> this has the potential for concurrency issues
+	-> only individual write operations are synchronized
+
+
+
+__Removing_Date__
+
+db.people.remove( arg1 );
+	arg1 accepts:
+		- exact match
+		- range operators
+		- {} empty document removes all documents one by one
+		- multi is not required to remove multiple docs
+
+db.people.drop();
+	-> more efficient than using remove()
+
+
+
+// endregion MongoDB CRUD
+
+// region Schema Design
+
+
+
+__MongoDB_Schema_Design__
+
+ - MongoDB backed applications have what is called application driven schema.
+ - MongoDB supports rich documents
+ 		-> stores arrays and other documents which pre-joins your data for fast access
+ - MongoDB has no constraints
+ 		-> foreign keys are not required
+ - MongoDB supports atomic operations, not transactions
+ - MongoDB has no declared schema
+ 		-> you will, however want you data to maintain structure
+
+__Relational_Normalization_Review__
+
+Every non-key attribute in the table, must provide a fact about the key, the whole key
+and nothing but the key.
+
+Goals of Normalization:
+	- free the database of modification anomolies
+	- minimize redesign when extending
+	- avoid bias toward any particular access pattern
+
+__Mongo_Design_for_Blog__
+
+two collections:
+	posts:
+		- _id
+		- title
+		- author
+		- body
+		- date
+		- permalink
+		- tags = []
+		- comments = []
+
+	users:
+		- _id
+		- password = encrypted password
+		- email
+
+__Alternative_Schema__
+
+posts:				comments:					tags:
+	- _id 				- _id 						- _id
+	- title 			- post_id 					- tag
+	- author			- author 					- post_id
+	- body				- author_email
+	- date 				- order
+
+Above might be a relational schema. In MongoDB try to embed/pre-join when you can unless
+you exceed the 16mb capacity.
+
+__Living_Without_Constraints__
+
+Foreign key constraint:
+	- What gaurantee is it that a foreign key exists in the original/primary key.
+
+MongoDB does not have this constraint on values. Foreign keys must be hard coded or another
+way to provide such constraint is to EMBED your data.
+
+Always try to embed your data.
+
+Living without constraints refers to keeping your data consistent even though MongoDB lacks
+foreign key constraints.
+
+__Living_Without_Transactions__
+
+ - MongoDB has no transactions.
+ - MongoDB has atomic operations
+ 		-> atomic operations mean that when you work on a single document that that work will
+ 		   be done before anyone else can see/access the document. They will either see all
+ 		   changes or none.
+ - three approaches to generate atomic operations:
+ 		1) Restructure your database to make sure that everything happens within a single 
+ 		   document so that you get the advantages of atomic operations.
+ 		2) You can implement whatever else you need within software to syncronize operations
+ 		3) Tolerate what you might get without transactions
+
+__One_to_One_Relations__
+
+One item corresponds to exactly one other item.
+
+When to embed?
+	-> How do you access the data and how frequently?
+
+If you would frequently access the parent data but less frequently access embedded data, it
+is probably best to keep them seperate so you wouldn't keep adding extra data to memory for
+each lookup.
+
+Size of items?
+
+If you are less likely to access both parent and embedded documents at the same time then refrain
+from embedding.
+
+__One_to_Many_Relations__
+
+city : people
+NY   : 8 million people
+
+Linking:
+
+people:				city:
+	- name 				- _id : NYC
+	- city : NYC
+
+Most of the time you will find that it is not one to many but one to few which is mpore suitable
+for embedding.
+
+__One_to_Few__
+	--> easier to model in MongoDB
+
+(1)blogpost		:	 comment(10)
+
+posts:
+	- name
+	- comments
+
+When is it recommended to represent a one to many relationship in multiple collection?
+	- Whenever the many is large.
+
+__Many_to_Many_Relations__
+
+books	 	:	  authors
+students	:	 teachers
+
+	--> tends to be Few : Few
+
+books:							authors:
+	- _id : 12						- _id : 27
+	- title : "Gone Girl"			- name : "John"
+	- authors : [ 27 ]				- books : [ 7, 8, 12 ]
+
+you could embed at risk of duplicating data
+
+__Benefit_of_Embedding__
+
+ - improved read performance as it is one round trip to the database
+ - spinning hdd has high latency
+ - can usually find data in one trip
+
+__Trees__
+
+ - representing trees inside database
+
+products						categories
+	- _id 							- _id
+	- category : 7					- name : "outdoors"
+	- name : ...					- parent_category : 6
+									  || children_categories : [ ... ]
+									  || ancestors : [ ... ]
+
+{ _id : 34, name : "Snorkelling", parent_id : 12, ancestors : { 12, 35, 90 } }
+																	^
+Which query will find all descendants of the snorkelling category?  |
+
+	-> db.categories.find( { ancestors : 34 } );
+
+__When_to_Denormalize__
+
+As long as we don't duplicate data we don't run into modification anomolies.
+	-> 1:1 - safe to embed
+	-> 1:Many - embed from the many to the one
+	-> Many:Many - Linking to avoid modification anomolies
+
+In all cases, if you need the extra performance then you can always embed if needed,
+but at the risk of duplicate data.
+
+__Handling_Blobs__
+
+mongodb facility
+	-> GRIDFS:
+		- breaks up large files into chunks and stores those chunks and its metadata
+		  in separate collections
+		- for files that exceed the 16MB limit
+
+__Performance__
+
+Two things that affect performance:
+	- underlying hardware
+	- algorithms
+
+In MongoDB we can:
+	- add indexes to collections
+	- distribute the load accross multiple servers known as sharding
+
+__Storage_Engines:_Intro__
+
+A storage engine is the interface between the persistent storage and the database.
+	-> HDD and DB communicate via storage engine
+
+MongoDB makes use of two different storage engines:
+	-> MMAP (Default)
+	-> WiredTiger
+		- Acquired in 2014
+		- developers from SleepyCat
+		- same team that developed Berkley DB
+
+* Storage engines directly determine/controls the format of indexes and the data file format *
+
+__MMAPv1__
+
+ - original storage engine of mongodb
+ - built on the MMAP system call
+ 		-> man mmap (for details)
+ 		-> used to create virtual memory on a 64bit machine
+ 		-> OS decides what is in virtual memory vs physical memory
+ - offers collection level concurrency
+ - each collection in mongodb is in its own file
+
+MMAPv1 provides:
+	1) collection level locking (concurrency)
+		-> one write allowed and multiple reads at a time per collection
+	2) in place updates 
+		-> MMAP first tries to perform an update in the same place the document was found in memory
+		-> if it can't, it moves the document to somewhere with a larger capacity
+	3) power of two sizes
+		-> in order to make in place updates more likely, MMAP practises the power of two sizing
+		-> when memory is allocated, MMAP allocates more than is needed for the initial storage
+		   space for each document which will be rounded to the closest power of two
+		   	- 3 bytes  -> 4 bytes
+		   	- 7 bytes  -> 8 bytes
+		   	- 19 bytes -> 32 bytes
+		-> an added benefit is it makes the space easier to fill by a different document if the
+		   original document needs to be moved
+
+
+
+__Wired_Tiger__
+
+For a lot of workloads it is faster than MMAP.
+
+1) Document level concurrency
+	-> lock free
+	-> assumes two writes are not to the same document
+	-> if same then one is unwound(dropped)
+
+2) Compression
+	-> of data
+	-> of indexes
+	-> manages its own storage
+
+3) No inplace update
+	-> this allows document level concurrency
+		-> it's document level because the document gets marked as unused and write in a new space
+		   which makes the document unusable by someone else
+	-> inefficient for very large documents
+
+db.collection.stats() - displays the stats for the collection
+
+
+
+__Indexes__
+
+An ordered set of things.
+	-> creating indexes takes initial setup time
+
+db.students.createIndex( { student_id : 1 } );
+	-> creates an ordered list on  the student_id value in ascending order(1) to improve
+	   lookup performance
+
+db.students.dropIndex( { student_id : 1 } );
+	-> same signature as when creating
+	-> there is a default index on "_id" that you cannot delete
+
+db.students.getIndex();
+
+Indexes on arrays are known as multikey indexes. You can also have compound indexes on arrays
+as long as both values of the index are not an array. Either value is acceptable.
+
+db.students.createIndex( { student_id : 1, class_id : 1 }, { unique : true } );
+	-> creates an index on student_id and class_id which is also a unique
+
+__Dot_Notation_and_Multikey__
+
+db.students.createIndex( { scores.score : 1 } );
+	-> adding indexes to subdocs with Dot Notation indexing
+
+db.students.find( { scores : { $elemMatch : { type : "exam", score : { $gt : 99.8 } } } } );
+	-> inspect scores array and find elements if type equals exam and score is greater than 99.8
+	-> $elemMatch operator groups elements within a document so we can search on the group of elements within an array
+	-> index is based on score so the query first finds all elements with a score greater than 99.8 and then it will
+	   filter the previous query output to type exam with score greather than 99.8
+
+__Unique_Indexes__
+
+ - second param of createIndex()
+ - db.collection.createIndex( { doc }, { unique : true } );
+
+ *sidenote* removing just one document:
+ 				-> db.stuff.remove( { thing : "apple" }, { justOne : true } );
+
+ - creating unique indexes forces the collection to mimic a set by not allowing inserts with 
+   duplicate values for the key index 
+   		-> "_id" default index is unique
+   		-> you cannot insert docs with duplicate _id values
+ - using the explain() command within your queries prints out the query process that can be
+   used to find performance and processing information
+
+__Sparse_Indexes__
+
+Use when an index key is missing from documents.
+
+{ a : 1, b : 2, c : 3 }
+{ a : 2, b : 5, c : 6 }
+{ a : 7, b : 2 } \_______c : null
+{ a : 3, b : 4 } /
+
+	- cannot create a unique index on c
+	- use the sparse option when creating index
+		-> only includes documents that actually have the specified element in the index
+
+	- when creating a unique index without the sparse option, only one document can have a null field value
+		-> for most situations every value must be present when creating a unique index 
+
+	- db.employees.createIndex( { cell : 1 }, { unique : true }, { sparse : true } );
+		-> sparse indexes cannot be used for sorting but uses a lot less space
+
+__Index_Creation,_Background__
+
+	____foreground(default)____|____background____
+							   |
+	   - relatively fast  	   |	- slower
+	   - blocks writers and    |	- doesn't block
+	   	 readers in the DB 	   |
+	   	 					   |
+	   	 					   |
+	   	 					   |
+
+db.students.createIndex( { scores.score : 1 }, { background : true } );
+	-> the background option allows the index to be created on a background thread
+
+ - creating an index in the background takes longer than creating it in the foreground
+ - a background index creation still blocks the mongo shell that you are using to create the index,
+   however the database server will continue to take requests
+
+__Using_Explain__
+
+ - How is your query is executed?
+ - What index is it using?
+ - How many documents were examined?
+
+db.collection.explain();
+	-> returns an explainable object
+	-> use with find(), update(), remove(), aggregate()
+	-> to find out more use the help() function to list the functions you can use with explain
+
+var exp = db.foo.explain();
+exp.find();
+
+ - runs in queryPlanner mode by default
+ - first provides a form of the query as "parsedQuery" : ...
+ - the winningPlan is the one that got chosen
+ - can have multiple input stages
+ - stage : IXSCAN or COLLSCAN
+
+modes used as explain() arguments:
+ - queryPlanner (default)
+ - executionStats
+ - allPlansExecution
+
+var exp = db.foo.explain("executionStats");
+	-> contains queryPlanner mode and the execution stats
+	-> nReturned is the total number of documents returned by the query
+	-> stats will tell you how many keys and documents were examined
+	-> execution time
+
+FYI: Whenever docsExamined is much larger than nReturned we have done too much work.
+
+var exp = db.foo.explain("allPlansExecution");
+	-> This does what the query optimizer does periodically. In other words, when you run
+	   allPlansExecution you are running what the query optimizer does periodically.
+	-> In other explain() modes you mainly see the execution stats for the winning plan,
+	   whereas allPlansExecution returns an array of plans with their stats.
+
+__Covered_Queries__
+
+A query that is covered entirely by an index so that 0 documents need to be examined.
+
+var exp = db.examples.explain();
+exp.find( { i : 45, j : 23 }, { _id : 0, i : 1, j : 1, k : 1 } );
+	-> total documents examined equals 0 because the query doesn't return _id values
+
+Only in the case where you project exactly what is in the index will it be a covered query.
+
+When is an index used?
+	- query shape:
+		- what fields are being searched on
+		- additional info like, is there a sort?
+
+When a query comes into mongodb, mongodb creates the query plans for each of the index
+candidates. Each plan is issued on its own thread and chosen based on which is the fastest
+to reach its goal state. Since the query shapes index is defined,mongodb knows to use this
+same index later for queries with the same query shape. Each query shape is stored in cache.
+
+The cache will be reset under 4 different circumstances:
+	- exceeds the threshhold of writes
+	- mongod process resets
+	- if the index is rebuilt
+	- if any index is added or droped
+
+__Index_Size__
+
+As with all databases, it is very important to fit what is called the working set
+into memory(off disc). The working set is the portion of our data that clients are
+accessing. Indexes must fit into memory for optimal performance.
+
+db.students.stats() or db.students.totalIndexSize() can be used to find the size of
+your indexes.
+
+The WiredTiger storage engine provides another compression type called 
+indexPrefixCompression that allows us to store smaller indexes.
+	-> ./bin/mongod storageEngine wiredTiger wiredTigerIndexPrefixCompression true (cmd)
+	-> This compression comes at a cost of CPU and will only work with certain data structures.
+
+__Index_Cardinality__
+
+In a _regular_ index, for every single key there is going to be an index point. If there is no
+key, i.e. null, there is going to be an index point on the null key.
+	-> 1 : 1
+
+In a _sparse_ index, null are not kept in the index so we are going to have index points greater
+than or equal to the number of documents in the collection.
+
+In a _multikey_ index(index on an array value), index becomes multikey as soon as one value of
+the index key(s) becomes an array. There may be multiple index points for each document making
+the possibility of being greater than or equal to the number of documents in the collection.
+
+**Indexes have a cost to maintain. It is good to know how many index points need to be updated.
+
+Example:
+If a document with 100 tags in the tags key array value gets moved, and the tags array is indexed
+with a multikey index, then 100 index points will need to be updated in the index for the one
+document to accomodate the move.
+
+__Geospatial_Indexes__
+
+Geospatial indexes allow you to find things based on location.
+
+_2dModel_
+
+									y
+
+									^
+									|
+									|						x
+									|
+			x						|		P(x,y)
+									|
+									|
+									|
+									|
+									|
+									|
+									|
+	<-------------------------------+--------------------------------> x
+									|
+									|
+									|		x
+									|
+									|
+									|
+					x				|
+									|
+									|
+									|
+									|
+									|
+									v  
+
+{ location : [ x , y ] }
+
+db.collection.createIndex( { location : "2d", type : 1 } );
+	-> type 2d
+	-> Geospatial indexes can be compound as seen above
+
+db.collection.find( { location : { $near : [ x , y ] } } ).limit(5);
+	-> use the $near operator to make use of geospatial indexes
+
+__Geospatial_Spherical__
+
+     longitude
+
+	 ()     
+   ((()))   latitude
+(((((())))))                                                                                    
+   ((()))
+     ()
+
+ - index called 2dsphere
+ - described using a geoJSON document
+
+location : {
+	type : "Point",
+	coordinates : [
+		-122.1691291,
+		37.4434854
+	]
+}
+	-> type, coordinates, and Point are reserved words within the geoJSON specification
+
+db.places.createIndex( { location : "2dsphere" } );
+
+db.places.find({
+	location : {
+		$near : {
+			$geometry : {
+				type : "Point",
+				coordinates : [ -121.1691291, 37.4278925 ]
+			},
+			$maxDistance : 2000
+		}
+	}
+});
+
+__Text_Indexes__
+
+Full text search index
+	-> creates an array of words of the text value so that we can search based on keywords
+
+db.sentences.createIndex( { words : "text" } );
+	-> words == key && text == type
+
+Search using a text index by:
+
+	db.sentences.find( { $text : { $search : "dog" } } );
+	db.sentences.find( { $text : { $search : "dog moss" } } );
+		-> can use multiple words
+		-> ignores case
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
